@@ -79,5 +79,47 @@ Application Deployment in a virtualized Environment
 #### 6. User Namespace
 - with user namespace support, we can have users who have a nonzero ID on the host, but who can have a zero ID inside the container. This is because the user namespace allows mappings of users and groups IDs per namespace.
 
+#### 7. cgroups
+- Control Groups (cgroups) provide resource limitations and accounting for containers.
+- In simple terms, they can be compared to the `ulimit` shell command or the `setrlimit` system call. Instead of setting the resource limit to a single process, cgroups allow you to limit resources to a group of processes.
+- Control groups are split into different subsystems, such as CPU, CPU sets, memory block I/O, and so on. Each subsystem can be used independently, or can be grouped with others. The features that cgroups provide are as follows :
+
+```
+Resource limiting
+Prioritization
+Accounting
+Control
+```
+
+Some of the subsystems that can be managed by cgroups are as follows :
+```
+blkio: Sets I/O access to and from block devices, such as disks, SSDs, and so on
+Cpu: Limits access to CPU
+Cpuacct: Generates CPU resource utilization
+Cpuset: Assigns CPUs on a multicore system to tasks in a cgroup
+Devices: Grants devices access to a set of tasks in a group
+Freezer: Suspends or resumes tasks in a cgroup
+Memory: Sets limits on memory use by tasks in a cgroup
+```
+- There are multiple ways to control work with cgroups. Two of the most popular ones are accessing the cgroup virtual filesystem manually and accessing it with the libcgroup library.
+- To use libcgroup on linux, run the following command to install the required packages on ubuntu or debian
+
+`sudo apt-get install cgroup-tools`
+
+- To install the required packages on CentOs, Fedora, or Redhat use the following code :
+`$ sudo yum install libcgroup libcgroup-tools`
+
+- once installed, you can get the list of subsystems and their mountpoint in the pseudo filesystem with the command `lssubsys -M`
+- let's assume that we are running a few containers and want to get the `cgroup` entries for a container. To get those, first we need to get the containerID and then use the `lscgroup` command to get cgroup entries of a container, which we can get using `docker container ps`
 
 
+#### Union filesysem
+
+- The union file system allows the files and directories of separate filesystems, known as layers, to be transparently overlaid to create a new virtual filesystem.
+- While starting a container docker overlays all the layers attached to an image and creates a read-only filesystem. On to p of that docker creates a read/write layer that is used by the container's runtime environment.
+- Docker can use several union filesystem variants, including AUFs, Btrfs, zfs, overlay, overlay2 and DeviceMappers
+- Docker also has a virtual file system (VFS) storage driver.A VFS doesn't support copy-on-write (COW) and is not a union file system. This means that each layer is a directory on the disk, and each time a new layer is created, it requires a deep copy of its parent layer. For these reasons, it has lower performance and requires more disk space, but it is a robust and stable option that works in every environment.
+
+#### Container format
+
+- The Docker engine
