@@ -180,3 +180,32 @@ docker image ls # To list the existing images
 docker container run -id --name demo alpine ash #create a container using the pulled image and list the containers
 
 ```
+
+#### Docker Architecture
+
+- Docker has client-server architecture. It's binary consists of both docker client and server daemon and can reside on the same host.
+- The client can communicate via sockets or restful api to either local or remote docker daemon.
+- The Docker daemon builds, runs and distributes containers.
+- The Docker client sends the command to the docker daemon running on the host machine.
+- The docker daemon also connects to either a public or local registry to get images requested by the client.
+
+![image](https://github.com/user-attachments/assets/bb3ada3a-d84a-41e2-adcc-616d6388952e)
+
+the docker client sends requeest to the daemon running on the local system, which then connects to public docker registry and downloads the image. once it is downloaded, we can run it.
+
+![image](https://github.com/user-attachments/assets/15fb130f-3851-43a2-a933-ad41ec421fa1)
+
+/*some keywords*/
+
+**images**: Docker images are read-only templates, and they give us containers during runtime. They are based on the idea of base image and layers resting on top of it.  For ex: we can have a base image of alpine or ubuntu and then we can install packages or make modifications over the base image to create a new layer. The base image and new layer can be treated as a new image.  For ex: in the above fig, Debian is the base image and emacs, apache are two layers added on top of it. They are highly portable and shared easily.
+
+- layers are transparently laid on top of the base image to create single coherent file system.
+
+**Registries**: Registries holds docker images. It can be public or private, depending on the location from which you can download or upload images. The public docker registry is called **dockerhub**
+
+**index**: An index manages user accounts, permissions, searches, tagging, and all that nice stuff that's in the public web interface of the docker registry
+
+**containers**: containers run the images that are created on top of base image and layers on top of it. They contain everything that is needed to run an application. a temporary layer is also added while starting the container, and it will be discarded if it is not commited after the container is stopped and deleted. If it is committed, then it would create another layer.
+
+**Repository**: Different versions of an image that can be managed by multiple tags, which are saved with different GUID. A repository is a collection of images tracked by GUIDs.
+
