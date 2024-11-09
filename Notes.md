@@ -122,4 +122,61 @@ Memory: Sets limits on memory use by tasks in a cgroup
 
 #### Container format
 
-- The Docker engine
+- The Docker engine combines the namespaces, control groups and UnionFS into a wrapper called a `container format`.
+- In 2015, Docker donated its container format and runtime to an organization called the `open container initiative (OCI). The OCI is a lightweight, open goverance structure formed under the linux foundation by docker and other industry leaders. The purpose of OCI is to create industry standards around container formats and runtimes. There are currently two specifications: The runtime specification and the image specification.
+
+- `The runtime spcification  outlines how to run an OCI runtime filesystem bundle`
+- Docker donated its Docker V2 image format to the OCI to form the basis of the OCI image specification
+- There are currently two container engines that support the OCI Runtime and Image specifications : Docker and rkt.
+
+#### Verifying requirements for Docker installation
+- login as a root user and give ` uname -i` to verify the os orchitecture . Because docker doesnot support 32-bit architecture.
+- check kernel version using `uname -r`, docker is supported on kernel 3.8 or later.
+- Running kernel should support on appropriate storage backend. Some of the options for such a backend are VFS, DeviceMapper, AUFS, Btrfs, Zfs and Overlayfs.
+   For ubuntu default storage backend or driver is `overlay2`, another popular one is `DeviceMapper` thin provisioning module to implement layers. It should be installed by default on a majority of linux platforms.
+- To check device mapper, we can use `grep device-mapper /proc/devices`
+- Use below commands to check the support for cgroups and namespaces have been in the kernel for sometime, and should be enabled by default. To check their presence use the below :
+```
+    $ grep -i namespaces /boot/config-4.15.0-29-generic
+    CONFIG_NAMESPACES=y
+
+    $ grep -i cgroups /boot/config-4.15.0-29-generic
+    CONFIG_CGROUPS=y
+```
+
+```
+$ sudo apt-get remove docker docker-engine docker.io # to uninstall older versions of docker
+$ sudo apt-get update  #update the apt package index
+$ sudo apt-get install \    #Install the packages to allow apt to use a repository over HTTPS
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        software-properties-common
+$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    OK #add docker's official GPG Key
+$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    OK #verify the key installation
+$ sudo add-apt-repository \ #Add the Docker apt repository using the stable channel
+        "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) \
+        stable"
+$ sudo apt-get update # update the packages
+$ sudo apt-get install docker-ce # install the latest version of Docker CE
+$ sudo docker container run hello-world # verify the installation
+$ sudo systemctl start docker #To start the services
+$ docker info # To verify the installation
+$ sudo apt-get update # To update the package
+$ sudo systemctl enable docker # To enable start of the service at bootime
+$ sudo systemctl stop docker # To stop the services
+```
+
+- For more details visit `https://docs.docker.com/install/linux/docker-ce/`
+
+#### Pulling an image and running a container
+
+```
+docker image pull alpine # To pull an image
+docker image ls # To list the existing images
+docker container run -id --name demo alpine ash #create a container using the pulled image and list the containers
+
+```
