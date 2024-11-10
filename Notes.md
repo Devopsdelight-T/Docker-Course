@@ -209,3 +209,83 @@ the docker client sends requeest to the daemon running on the local system, whic
 
 **Repository**: Different versions of an image that can be managed by multiple tags, which are saved with different GUID. A repository is a collection of images tracked by GUIDs.
 
+#### Adding nonroot user to administer Docker
+
+- for ease of use, we can allow a nonroot user to administer Docker by adding it to docker group. This is not required when using Docker on mac or windows
+
+```
+sudo groupadd docker
+sudo useradd dockertest #create user to whom you want to give permissions to administer docker
+sudo usermod -aG docker dockertest
+```
+
+```
+man docker
+man docker ps
+man docker-ps
+```
+
+#### Working with Docker containers
+
+- Docker's primary objective is running containers. we'll see the different operations that can be performed with containers, such as starting, stopping, listing, deleting and so on.. This will help us to use docker for different usecases, such as testing, CICD, setting up PAAS, and so on..
+
+let's verify the docker installation by running the following command : `docker version`
+
+- we need image to get the container started. let's see how images are searched for on the docker registry
+- Ensure that docker daemon is running on the host and can be connected through docker client
+- `docker search [options] TERM` - Docker search command lets you search for an image on the docker registry.
+- `docker search --help` to look at the help on the docker search
+
+**Pulling an image**
+```
+docker image pull <options> name[:TAG|@DIGEST]
+docker pull [options] NAME[:TAG|@DIGEST] //legacy commmand
+docker pull ubuntu //To pull the image
+```
+
+- the `pull` command downloads all the layers from the docker registry that are required to create that image locally.
+- Image tags group images of same type. `docker image pull centos:centos7`
+- By default, the image with latest tag gets pulled. To pull all images corresponding to all tags, use the command `docker image pull --all-tags alpine`
+- from docker 1.6, we can build and refer to images by a new content addressable identifier called `digest`. it is very useful feature when we wanted to work with specific images rather than tags. To pull an image with specific digest, we can use the following syntax `docker image pull <image>@sha256:<digest>` ex: `    $ docker image pull nginx@sha256:788fa27763db6d69ad3444e8ba72f947df9e7e163bad7c1f5614f8fd27a311c3 `
+- once an image gets pulled, it resides on the local cache (storage) so subsequent pulls will be very fast. This feature plays a very important role in building docker layered images
+- `docker image pull --help` to get help related to docker images
+
+#### listing images
+- we can list the images that are available on the system by running docker daemon. These images might have pulled from registry, imported through `docker image pull` command or created through a dockerfile
+```
+docker image ls
+docker images
+```
+- The docker client talks to the docker engine and gets a list of images that are downloaded (pulled) to the docker host
+- To get help with docker images `docker image ls --help`
+
+#### starting containers
+- once we have images, we can use them to start containers.
+- To start container we can use any of the following commands
+```
+docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+docker container run [OPTIONS] IMAGE [COMMAND] [ARG...]
+```
+
+- /*docker container run command is recommended over docker run because, in version 1.13 docker logically grouped container operations under the docker container management command and so docker run might be obsolete  in the future*\
+
+- `$ docker container run -i -t --name mycontainer ubuntu /bin/bash`
+
+```
+The -interactive or -i option starts the container in interactive mode by keeping the STDIN open
+The --tty or -t option allocates a pseudo-tty and attaches it to the standard input
+```
+- if the name is not specified then a random string will be assigned as the name
+- if the image is not available locally,then it will be downloaded from the registry first and then run
+
+- Under the hood docker will :
+```
+Merge all the layers that makeup that image using UnionFS
+Allocate a unique ID to a container, which is refered as containerID
+Allocate a filesystem and mount read/write layer for the container. Any changes on this layer will be temporary and will be discarded if they are not committed.
+Allocate a bridge network interface
+Assign a IP address to the container
+Execute the process specified by the user
+```
+- Also with default docker configuration, it creates a directory (with container id inside /var/lib/docker/containers) which has the container specific information such as hostname, configurationdetails, logs and /etc/host )
+- To exit from the container, press `ctrl+D` or type `exit` it is simmilar to exiting from the shell, but this will stop the container. Alternatively to detach  
