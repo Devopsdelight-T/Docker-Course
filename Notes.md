@@ -288,4 +288,105 @@ Assign a IP address to the container
 Execute the process specified by the user
 ```
 - Also with default docker configuration, it creates a directory (with container id inside /var/lib/docker/containers) which has the container specific information such as hostname, configurationdetails, logs and /etc/host )
-- To exit from the container, press `ctrl+D` or type `exit` it is simmilar to exiting from the shell, but this will stop the container. Alternatively to detach  
+- To exit from the container, press `ctrl+D` or type `exit` it is simmilar to exiting from the shell, but this will stop the container. Alternatively to detach from the container press `ctrl + P + Q`
+- The detached container will detach itself from the terminal, give control back to docker host shell, and wait for the `docker container attach` command to attach back to the container.
+- the `run` command creates and starts the container. The container can be started in the background, and then we can attach to it whenever needed. we need to use `-d` option  to start the container in the background `docker container run -d -i -t ubuntu /bin/bash`
+- we can run a non-interactive process, and run it in the background to make a deamonized container, like the following
+```
+docker container run -d ubuntu \
+      /bin/bash -c \
+      "while [true]; do date; sleep 1; done"
+```
+- To remove the container after it exits, start the container with `--rm` option, `docker run --rm ubuntu date`
+- `--read-only` option of the `run` command will mount the root filesystem in `read-only` mode
+```
+docker container run --read-only --rm \
+   ubuntu touch file
+touch: cannot touch 'file': Read-only file system
+```
+- A container can be refered to in three ways; by name, by its short container id, by its container id
+- `docker container run --help` to look at the help option of docker run
+
+#### listing containers
+
+- to list containers `docker container ls <options>` or legacy way `docker ps <options>`
+-  The docker daemon will look at the metadata associated with the containers and list them . By default command returns the following :
+```
+container id, the image from which it was created, the command that was run after starting the container, the details about when it was created, the current status, the ports that are exposed from the container, the name of the container
+
+we can use --filter/f option to ps, to do filtering of containers
+```
+
+```
+docker container ls -a # To list both running and stopped containers
+docker container ls -aq # To return just the container IDs of all containers
+docker container ls -l # To show last created container, including non-running containers
+```
+- To get help of the listing of container, we can use `docker container ls --help`
+
+#### logs
+- if the container emmits logs or output on `STDOUT`/`STDERR` then we can get them without logging into the container
+- To get logs from the container, run the command `docker container logs <options> container` or `docker logs <options> container`
+- Docker will look at the container's specific log file from `/var/lib/docker/containers/<container id> /<containerid>-json.log`
+- with `-t` option, we can get the timestamp with each log line, and with `-f` we can get tail-like behavior
+- To get help `docker container logs --help`
+
+#### stopping a container
+- To stop a container `docker container stop <options> container [container..]` or `docker stop [options] container [CONTAINER..]`
+- To stop a container after waiting for sometime, use the `--time/t` option
+- To stop all running containers, run the following command `docker stop $(docker ps -q)`
+- To get help of stopping containers, `docker container stop --help`
+
+#### Removing a container
+- To remove container permanently we must have to stop the container or use the force option
+- `docker container rm [options] CONTAINER [CONTAINER]` or `docker rm [options] container [container]`
+- Here docker daemon will remove the read/write layer, which was created while starting the container
+- `docker container rm --help` - To get help related to removing docker container
+
+- we can remove all stopped containers with a single command. i.e; `docker container prune <options>`
+- To get any help related to prune, `docker container prune --help`
+
+- from docker 1.2, a policy-based restart capability was added to the docker engine to automate restarting containers. The feature is activated using `--restart` option of the `run` command and it supports container restart at docker host boot time, as well as when container failure occur
+- syntax: `docker container run --restart=policy <options> image[:tag] [command] [arg...]`
+
+- There are 3 restart policies to choose from :
+```
+no: This doesnot start the container if it dies
+on-failure: this restart the container if it fails with a non-zero exit code
+always: This will always restart the container without worrying about the return code
+```
+- we can also get an optional restart count with the `on-failure` policy as follows : `docker container run --restart=on-failure:3 -d -i -t ubuntu /bin/bash`
+- To get help `docker container run --help`
+- if restart policies doesnot meet your requirements, then use process managers such as `systemd`, supervisor, or upstart
+
+- from  docker 1.2 onwards, we can give access to the host device to a container with the `--device` option.
+- `docker container run --device=<host-device>: <container device mapping>:<permissions> [options] Image [command] [arg..]`
+- from docker 1.3, we can inject a new process inside a running container `docker exec [options] container command [arg...]`
+
+- while doing debugging, automation, and so on.. we will need the containers configuration details. Docker provides `container inspect` command to get those easily. `    $ docker container inspect [OPTIONS] CONTAINER [CONTAINER...]`
+- with `-f | --format` option, we can use the Go (programming language) template to get this specific information. The following command will give us an IP address for the container `    $ docker container inspect \
+         --format='{{.NetworkSettings.IPAddress}}'  $ID
+    172.17.0.2`
+- `docker container inspect --help` to get help
+
+#### Labeling and filtering containers
+- from docker 1.6, a feature has been added so that we can label containers and images through which we can attach arbitrary key-value pairs as metadata.
+- These are like environmental variables, these are not available for applications running inside containers, but they are available to docker clients that manage the images and containers.
+- labels attached to images also get applied to containers that are started using those images. we can also attach labels to containers while starting them.
+
+- syntax for labeling `docker container run --label <key>:<value> <command>`
+- all the labels attached to a container can be listed through the `docker container inspect` command.
+- You can apply labels to a container from a file by using the --label-file option. The file should have a list of labels separated by a new EOL
+
+#### Reaping a zombie inside a container
+- On Linux (and all Unix-like) operating systems, when a process exits, all the resources associated with that process are released with the exception of its entry in the process table
+-  This entry in the process table is kept until the parent process reads the entry to learn about the exit status of its child. This transient state of a process is called a `zombie`
+- As soon as the parent process reads the entry, the zombie process is removed from the process table, and this is called reaping
+-   If the parent process exits before the child process, the init process (PID 1) adopts the child process (PID 1) and it eventually reaps adopted child processes when they exit
+
+`systemd` is a variant of the `init` system and is adopted by many linux distributions
+
+- Docker is designed to run one process per container and usually the process running inside the containers doesn't create child processes. However, if the process inside the container creates child processes, then an init system is needed to reap zombie processes
+- we can launch a container with `init` process using the `--init` option of the docker container run command `docker container run --int [options] image [command] [arg..]`
+
+### working with docker images
