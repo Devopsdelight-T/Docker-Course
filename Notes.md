@@ -390,3 +390,74 @@ always: This will always restart the container without worrying about the return
 - we can launch a container with `init` process using the `--init` option of the docker container run command `docker container run --int [options] image [command] [arg..]`
 
 ### working with docker images
+
+- As we know, docker containers are created from docker images, according to your application requirements, you can choose to create complex services using docker images that are built and offered by the folks at docker or third parties.
+- if the existing images don't fit your requirements, you can also extend the existing images or custom-build your own images.
+
+  - There are couple of ways to create images. 1. Manually making changes inside a container and then committing the image and 2. using dockerfile
+ 
+  - we can make new image from the running/stopped container using `docker container commit` command syntax for it is `docker container commit <options> container <repository:tag>`
+  - `docker container diff <containername/id>` command lists all the changes to the contqiner filesystem from its image
+
+```
+A : This is for when a file/directory has been added
+C: This is for when a file/directory has been modified
+D: This is for when a file/directory has been deleted
+```
+
+- By default, a container gets paused while doing the commit, you can change its behavior by passing `--pause=false` to commit
+- To get help related to it use, `docker container commit --help`
+
+#### Creating an Account with Docker Hub
+
+- Docker hub is a cloud-based public registry service to host both public and private images, share them , and collaborate with others. It has integration with github and bitbucket and can trigger automated builds
+- To host your image in dockerhub, you need to create your dockerid. This gives you the ability to create any number of public repositories in dockerhub
+- Dockerhub also gives one free private repository, A repository can hold different versions of an image
+- To signup visit `https://hub.docker.com`
+
+#### logging in and out of docker image registry
+- in the world of containerization, oftentimes, you will be publishing your images for public /private consumption of sharing images using docker regitry.
+- To push an image to public repository, you must log into a docker registry and you must be the owner of the repository.
+- In the case of private repository, both pulling and pushing are allowed, but only once you logged in.
+
+- By default, both `docker login` and `docker logout` comamnds assume `https://hub.docker.com/` as the default registry, but this can be changed.
+
+```
+docker login
+docker info | egrep ^\(username\|Registry\)
+docker login registry.gitlab.com
+cat ~/.docker/config.json
+docker logout
+```
+
+- By default, `docker login` command interactively prompts the user for their username and password, we can change this behaviour by supplying the username with `-u` or `--username` option and the password using `-p` or `--password`
+
+- to get help of it we cqn use `docker login --help` or `docker logout --help`
+
+  
+#### push a docker image to a registry
+
+```
+$ docker image push [OPTIONS] NAME[:TAG]
+$ docker push [OPTIONS] NAME[:TAG] 
+```
+
+- In order to push an image to a docker registry, we begin by tagging the image using `docker image tag` command with appropriate user or organization in the docker hub. `docker image tag <name of the image> <name of the user/organization/name of the image>`
+- To push the image to the docker hub , use `docker image push <username/orgainzation name/name of the image>`
+- once above two steps done, we can login to the docker hub and see the images in the dashboard
+
+- let's say u want to push the image to a registry that is hosted locally. for this first need to tag the image with registry host's name or IP address with the port number on which registry is running, and then push the images.
+- For example, let's say our registry is configured on shadowfax.example.com. To tag the image, we would use the following command:
+```
+    $ docker tag myapache2 \ 
+       shadowfax.example.com:5000/cookbook/myapache2
+
+       $ docker push shadowfax.example.com:5000/cookbook/myapache2   # to push an image
+```
+
+- To get help of push use, `docker push --help`
+
+- `docker image history` command helps us to find all the layers in the image, its image ID, when it was created, how it was created, the size and nay additional commnets associated with that layer
+
+`docker image history <options> image>`
+
