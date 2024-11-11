@@ -459,5 +459,30 @@ $ docker push [OPTIONS] NAME[:TAG]
 
 - `docker image history` command helps us to find all the layers in the image, its image ID, when it was created, how it was created, the size and nay additional commnets associated with that layer
 
-`docker image history <options> image>`
+`docker image history <options> image` ex: `docker image history myapache2`
 
+
+- when we build a docker image, the docker engine preserves the build instruction in the image metadata. later `docker image history` command recursively gathers these build instruction from the prescribed image to the base image and present it in the nice format
+
+
+#### Removing an image
+
+-  the `docker image rm` command lets you remove images from the docker host. This command can remove one or more images and you can specify images using any one of the below
+```
+image short id
+image long id
+image digest
+image name along with tag. If the tag is not specified then the latest tag is assumed by default
+```
+
+- if the image happens to have more than one tag associated with it, then those tags must be removed before removing the image. Alternatively, we can forcefully remove them using `-f` or `--force` options of the `docker image rm`
+
+```
+docker container stop $(docker container ls -q) # To stop all containers
+docker container rm $(docker container ls -a -q)` # To delete all containers
+docker image rm $(docker image ls -q)` # To delete all images
+```
+
+- To get help of it use `docker image rm --help`
+
+- 
