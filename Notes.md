@@ -485,4 +485,84 @@ docker image rm $(docker image ls -q)` # To delete all images
 
 - To get help of it use `docker image rm --help`
 
-- 
+#### Exporting an image
+- Let's say you have a customer who has very strict policies that do not allow them to use images from the public domain. In such cases, you can share one or more images through tarballs, which can then later be imported on another system.
+
+- the `docker image save` command lets you save or export images as tarballs. The command syntax as follows `docker image save [-0|--output]=file.tar IMAGE [IMAGE...]` ex: `docker image save --output=myapache2.tar myapache2`
+- we can also export the container's filesystem using the command `docker container export --output=myapache2_cont.tar <containerid>`
+To get help related to it, use `docker image save --help` or `docker container export --help`
+
+#### Importing an image
+
+- To get a local copy of the image, we either need to pull it from the accessible registry or import it from the already exported image. syntax is `docker image import <options> file|url|-<repository:tag>`
+- `docker image import myapache2.tar apache2:imported`- Here, we have imported our `myapache2.tar` file as an `apache2:imported` image
+- we can also import TAR files stored in remote location by specifying their URL
+- To get help related to importing, we can use `docker image import --help`
+
+### BUilding an image using a Dockerfile
+
+- The `Dockerfile` is a text-based build instruction file that enables us to define the content of the docker image and automate image creation. The docker build engine reads the instrution in the `dokerfile` line by line and constructs the image as prescribed.
+- The images created using `dockerfiles` are immutable
+
+- first let me create an empty directory. `mkdir sample_image, cd sample_image` and then create a `Dockerfile` with the following content
+
+```
+# use ubuntu as the base image
+FROM ubuntu
+
+# Add author's name
+LABEL maintainer="Devopsdelight"
+
+# Add the command to run at the start of the container
+
+CMD date
+
+```
+- Now run the following command inside the directory where we created `dockerfile` to build the image `docker image build .`
+- To create our own repository name using the `-t` option of the `docker image build` command, as follows `docker image build -t sample .`
+- Docker re-uses the intermediate layers from the image that was build. i.e; it uses cache.
+- if we don't want the build system to reuse the intermediate layers, then add `--no-cache` option to the build
+
+- if there is a file named `.dockerignore` in the current working directory with the list of files and directories (new-line separated), then those files and directories will be ignored in the build context
+
+- The format of Dockerfile is `INSTRUCTION arguments`. Generally instructions are given in uppercase, but they are not case-sensitive. They are evaluated in order.
+- `#` code phrase in the beginning is treated like a comment
+**Different types of instructions**
+- `FROM:` This must be first instruction of any Dockerfile, and sets the base image for subsequent instructions. `FROM <image>` or `FROM <images>:<tag>`
+- There can be more than one `FROM` instruction in one Dockerfile to create multiple images
+-  if we want to use private or third-party images, then we have to include them as follows `[registry_hostname[:port]/][user_name/](repository_name:version_tag) ` ex: `FROM registry-host:5000/cookbook/apache2
+        FROM  <images>:<tag> AS <build stage> `
+   
+- `RUN :` we can execute the `RUN` instruction in two ways. First, we can run it in the shell ( shell -c): `RUN <command> <param1>...<paramN>` second, we can directly run as executable: `RUN ["executable", "param1",.."paramN" ]
+- `LABEL:` From Docker 1.6, we have a new feature to the attached arbitrary key-value pair of Docker images and containers.To give a label to an image, we use `LABEL` instruction in Dockerfile -for ex: `LABEL distro=ubuntu`
+- `CMD:` The `CMD` instruction provides a default executable while starting a container. if the `CMD` instruction doesnot have any executable (param2) then it will provide argument to `ENTRYPOINT`
+
+```
+CMD  ["executable", "param1",...,"paramN" ]
+CMD ["param1", ... , "paramN"]
+CMD <command> <param1> ... <pamamN>  
+```
+- only one `CMD` instruction is allowed in Dockerfile. If more than one is specified, then only the last one will be honored.
+- `ENTRYPOINT:` This help us configure the container as an executable. Simmilar to `CMD`, there can be maximum of one instruction for `ENTRYPOINT`; if more than one is specified, then only the last one will be honored.
+
+`ENTRYPOINT  ["executable", "param1",...,"paramN" ]
+        ENTRYPOINT <command> <param1> ... <pamamN>`
+
+- once parameters are defined with the `ENTRYPOINT` instruction, they cannot be overwritten at runtime. However, `ENTRYPOINT` can be used as `CMD`, if we want to use different parameters for `ENTRYPOINT`
+
+- `EXPOSE:` This exposes network ports on the container, on which it will listen at runtime: `EXPOSE <ports> [<port> ..]`
+
+- `ENV:` This will set the environment variable `<key>` to `<value`. It will be passed to all the subsequent instructions and will persist when a container is run from the resulting image: `ENV <key> <value>`
+- `ADD:` This copies files from the source to the destination. `ADD <src> <dest>`
+- if path containing white spaces then we can use `ADD ["<src>"... "dest"]`
+
+- `COPY:` This is also simmilar to `ADD`. The difference between `ADD` and `COPY` is that `ADD` will extract URLs from src to dest but `COPY` can't able to do it. `COPY` can create more layers but `ADD` can't able to create that many layers when compared to `COPY`
+- `COPY` Instruction optionally supports a `--from` option for multistage building.
+- `VOLUME:` This instruction will create a mount point with the given name and flag it as mounting then external volume using the following syntax: `VOLUME ["/data"]` alternatively, we can use the code `VOLUME /data`
+- `USER:` This sets the username for any of the following run instruction using the following syntax: `USER <username>/<UID>`
+- `WORKDIR:` This sets the working directory for any `RUN`, `CMD` and `ENTRYPOINT` instructions that follow it. It can hav e multiple entries in the same Dockerfile. A relative path can be given that will be relative to the earlier `WORKDIR` instruction using the following syntax: `WORKDIR <path>`
+
+- `ONBUILD:` This adds trigger instruction to the image that will be executed later, when this image will be used as the base image for another image. This trigger will run as part of the `FROM` instruction in a downstream Dockerfile using the syntax: `ONBUILD [Instruction]`
+- To get help on image build use `docker image build --help`
+
+#### Setting up a private index/registry
