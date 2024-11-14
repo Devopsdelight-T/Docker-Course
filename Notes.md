@@ -715,4 +715,5 @@ CMD <command> <param1> ... <pamamN>
 - To get help of dig, use command `dig -h`
 
 #### persisting data using volume
-- 
+- As we are aware, the container's read=write layer is temporary. and is destroyed when the container is removed.
+- There are use cases where the container wherein you will have to preserve the application data beyond the lifecycle of the container.
