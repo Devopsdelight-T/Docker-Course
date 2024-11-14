@@ -566,3 +566,153 @@ CMD <command> <param1> ... <pamamN>
 - To get help on image build use `docker image build --help`
 
 #### Setting up a private index/registry
+- Earlier, we used Docker-Hosted registry to push and pull images. Now, let's see how to host a private registry in our infrastructure.
+- First, let's launch a local registry on the container by using command `docker container run -d -p 5000:5000 --name registry registry:2`
+- To push an image to the local registry, we need to prefix the repository name with the `localhost` hostname or the ip address `127.0.0.1` and the registry port `5000` using the docker image tag command `docker tag apache2 localhost:5000/apache2`
+- Now, let's push it `docker image push localhost:5000/apache2`
+
+#### Automated Builds with Github and Bitbucket
+
+- Dockerhub allows us to create automated images from a Github or Bitbucket repository using its build clusters. The Github/Bitbucket repository should contain the Dockerfile and also the content that is to be copied/added inside the image.
+
+```
+1. Login to Dockerhub at https://hub.docker.com
+2. Link our Github/Bitbucket account to Dockerhub at Dockerhub ui and going over to settings
+3. Followup the wizard
+```
+
+- These automated build process works, when we select a Github repository for an automated build, github enables the docker service for that repository. We can confirm this by looking at the integrations & services section of the settings tab in the gihub repository
+- Now, whenever we make changes to any sourcecode and commit to the Github Repository, the automated build gets triggered and builds the Docker image using Dockerfile that is reside int e github repository
+
+#### Creating a minimal image using a scratch base image
+
+```
+1. clone the repository ` https://github.com/docker-cookbook/scratch.git`
+2. Change directory `cd scratch`
+3. Build a static executable demo from the demo.c file using gcc:7.2 runtime container
+     $ docker container run --rm \ 
+     -v ${PWD}:/src \
+     -w /src \
+     gcc:7.2 \
+     gcc -static -o demo demo.c
+4. verify binary `ls -lh demo`
+5. Let's build and image from the scratch base image `docker image build -t scratch-demo .`
+6. Finally, let's verify the image by spinning a container from the preceding image and checking the image size. `docker container run --rm scratch-demo`
+7. let's check the history of the image by using `docker image history scratch-demo`
+```
+
+#### Building images in multiple stages
+- From Docker version 17.05, we have a cool feature called `Multistage builds`
+- Docker's multistage build enables us to orchestrate complex build stages in a single Dockerfile.
+- In the Dockerfile, we can define one or more intermediate stages with the appropriate parent image and the build ecosystem to build the artifact.
+- The Dockerfile provides the essential previously mentioned primitives in building the image using Dockerfile to copy the artifacts to subsequent stages and finally compose a Docker image with just enough runtime and artifacts
+- Before begin this first clone the repo at `https://github.com/docker-cookbook/multistage.git`
+```
+1. change directory `cd multistage`
+2. Build the image using Docker image `docker build -t multistage .`
+3. spinup the container from the image `docker run --rm multistage`
+```
+
+#### Visualizing the image hierarchy
+
+- Run to get visual form of image hierarchy  `$ docker run --rm \
+                 -v /var/run/docker.sock:/var/run/docker.sock \
+                 nate/dockviz \
+                 images --dot  | dot -Tpng -o images-graph.png`
+  
+- Run to visualize the container dependencies: `    $ docker run --rm \
+                 -v /var/run/docker.sock:/var/run/docker.sock \
+                 nate/dockviz \
+                 containers --dot  | dot -Tpng -o containers-graph.png
+  `
+
+
+### Networking and Data Management for containers
+-  When Docker Daemon starts, it creates a virtual ethernet bridge with the name `docker0`. perhaps, we can get more details of it using `ip addr` command on the system that runs the docker daemon `ip addr show docker0`
+- Docker randomly chooses an address and subnet from a private range defined in RFC 1918. Using this bridged interface, containers can communicate with each other and with the host system
+- By Default, Everytime Docker starts a container, it creates a pair of virtual run on Ethernet interface and then performs the following with the pair:
+
+```
+- Ties one end of the `veth` pair to the `docker0` bridge interface in the dockerhost -let's call this end the host end
+- Ties the other end of the `veth` pair to the newly created container as its `eth0` interface-let's call this end of the `veth` pair the container end
+```
+- let's use `--network=host` option of the `docker container run` command to connect to the docker host's network stack. Since, the `alpine` image is packed with the `brctl` utility command. we will choose to spin our container with `alpine` image and run the `brctl show` command to display the bridge details, `docker container run --rm --network=host alpine brctl show`
+- All the host ends of the `veth` pairs are bound to the default docker bridge `docker0`
+- Apart from setting up the `docker0` bridge, Docker also creates `iptables` NAT rules, so that all containers can talk to the external world by default, but the external world cannot talk to the containers. `sudo iptables -t nat -l -n`
+- `POSTROUTING` rule enables the docker containers to connect to the external world. `docker run --rm alpine traceroute -m 3 -n 8.8.8.8`
+
+#### Accessing containers from outside
+- In the mircroservice architecture, multiple smaller services are used to provide a meaningful enterprise-grade application.
+- By default, the docker container allows outgoing data traffic, but there is no path for external world to connect to the services running inside the container.
+- Docker provides a solution to selectively enable the external world to communicate with the service running inside the container, using `--publish` options of the `docker container run` command.
+
+```
+--publish/-p  | publish a container's port to the host
+
+--publish-all / -P | publish all exposed ports to random ports
+```
+- Both these options allow the external world to connect to the services running inside the containers through the ports of the Docker host
+- To look at the port mapping between the container and the docker host port use `docker container port <containerid>`
+- These whole things works, when a container is launched with `-p <host port>:<container port>`, the Docker Engine configures the `iptables` destination NAT rule.
+- This destination NAT rule is responsible for forwarding all the packets it receives on the Docker host port to the container's port `sudo iptables -t nat -l -n`
+- The typical port range is from `32768` to `61000`, which is defined in `/proc/sys/net/ipv4/ip_local_port_range`
+
+#### Attaching containers to a host network
+- first, let's run `docker container run -it --rm alpine sh`
+- Now, let's launch an alpine container by attaching it to the Docker host's network stack by using `--net=host` as an argument and executing the `ipaddress` command. use the command `docker container run -it --rm --net=host alpine sh`
+- Here, in Step 1, Docker created a network namespace for the container and assigned and IP address for the container
+- In Step 2, Docker attached the container to the host network stack, hence the container has full access to the host's network stack
+
+#### Launching containers with no network
+- Docker supports 3 types of network (`bridge, hosts and none`), check it with `docker network ls` command
+- `none` network mode comes in handy when you package any utility inside the container that doesn't need any network connectivity
+- `docker container run --rm --net=none alpine ip address`
+- when we launch a container with the network mode set to `none`. Docker only creates a `loopback` interface for that container. Since, there is no Ethernet interface defined for this container, the container is isolated from the network
+
+#### Sharing IP address with other containers
+![image](https://github.com/user-attachments/assets/8cd206d7-1d0c-47ac-ae3f-431f79f0aa41)
+
+- In essence, The Docker Engine assigns an IP address for the IP container and then the IP address is inherited by the service1, service 2, and service 3 containers.
+- let's launch a container in the background. `docker container run -itd --name=ipcontainer alpine`
+- look at IP address `docker container exec ipcontainer ip addr`
+- finally, launch a container by attaching its network to the `ipcontainer` by using `docker container run --rm --net container:ipcontainer alpine ip addr`
+- when containers share the network namespace, the original container that is created the namespace must be in a running state until the other containers are running. If the original container is stopped before the other contianers, it will put the other containers in an unusable state.
+
+#### Creating a user-defined bridge network
+- The containers that are connected through the default bridge can communicate with each other using IP address, but not the container's name.
+- The container Ip address is assigned during the container start time,and hence it does not work well for multicontainer orchestration. Docker made an attempt to address this issue by linking containers statistically using the `--link` option of the `docker container run` command.
+- Unfortunately, the linked containers have a tightly coupled container life cycle, so a restart of a container might prevent/delay the complete solution, and it will also not be scalable
+- Later in between version 1.9 and 1.12, docker introduced user-defined network that solves many of the multicontainer orchestration and communication
+- The user-defined bridge network's functionality is very much simmilar to the default bridge with some additional features:
+
+```
+1. service discovery through an embedded DNS server, which is an excellent fit for multicontianer orchestration and communication
+2. DNS-based load balancing, another cool feature that complements multicontainer orchestration and communication. This feature allows us to seamlessly and transparently scale cotnainers
+3. Optionally, we can configure our own subnet to the bridge
+4. Optionally, we can manually assign an IP address to the containers from the bridge's subnet
+```
+
+- let's create a new user-defined bridge network using `docker network create` command `docker network create docker-learning` . Here user-defined network is named `docker-learning`
+- Inspect the user-defined bridge network `docker-learning` using `docker network inspect docker-learning` command
+- To look at the interfaces, use `ip addr` command
+- look at the `iptables` to understand the NATing behavior of the user-defined bridge. `sudo iptables -t nat -t -n`
+- with `docker network create` command we can have dozens of options to customize network according to our business requirements. `docker network create <name of the network> --subnet <range of subnet>`
+- To get help of it use, `docker network create --help`
+
+  #### Discovering and load balancing containers
+  ![image](https://github.com/user-attachments/assets/fa26c209-1e0f-40e8-8ba1-be24ae4ea272)
+- Here, we will launch `container1` and `container2` like a service and use a transient container to demonstrate `service discovery through an embedded DNS server`, `DNS based load balancing` capabilities of the user-defined bridge network
+
+- let's start by spinning two containers, `container1` and `container2`, by connecting them to teh user-defined bridge network `docker-learning` using the `docker container run` command `docker container run -itd --name container1 --network-alias netalias --net docker-learning alpine` and `docker container run -itd --name container2 --network-alias netalias --net docker-learning alpine`
+
+- Here `--network-alias` option helps us to group multiple containers with a single alias name and load balance using the embedded DNS. The embedded DNS provides round-robin load balancing
+- Look at the Ip address of the both containers using the `docker container inspect ` command. `docker container inspect --format `{{ .Networksettings.Networks.docker-learning.IPAddress }}` container1` and `docker container inspect --format `{{ .Networksettings.Networks.docker-learning.IPAddress }}` container2`
+- Now let's use transient containers to understand the service discovery capability of user-defined networks. `docker container run --rm --net docker-learning alpine ping -c1 container1`
+- Now the containers can communicate with each other by using the container's names. This service discovery capabilities simplifies the multicontainer orchestration
+- let's gain more understanding of the DNS loadbalancing capability of the user-defined network by pinging the network alias `netalias` use `docker container run --rm --net docker-learning alping ping -c1 netalias` Here, the embedded DNS load balancer resolved the `netalias` using a round-robin algorithm
+- When a container is connected to a user-defined network, the Docker Engine adds the container's name and its network alias (if present) to the user-defined network's DNS record. Then Docker shares these details to the other containers connected to the same user-defined network through the embedded DNS hosted at 127.0.0.11
+
+- To get help of dig, use command `dig -h`
+
+#### persisting data using volume
+- 
