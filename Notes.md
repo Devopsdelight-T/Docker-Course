@@ -717,3 +717,82 @@ CMD <command> <param1> ... <pamamN>
 #### persisting data using volume
 - As we are aware, the container's read=write layer is temporary. and is destroyed when the container is removed.
 - There are use cases where the container wherein you will have to preserve the application data beyond the lifecycle of the container.
+- The recommended way to persist the application data outside of the container's filesystem, using volumes or a bind mound.
+- **Docker volumes** are a special directory in the docker host, and are created and managed by Docker itself. we can mount these volumes to out container and have the application store its data to the volume.
+- The Docker volumes are either named or anonymous. Functionally, Both anonymous and named volumes both are same. However, the anonymous volumes name is randomly generated
+
+- Create a named volume by using `docker volume create devopsdelightvol`
+- List the volume using `docker volume ls`
+- Launch an interactive container using `docker container run` command and `-v` option to mount the `devopsdelightvol` volume to the container. `docker container run -it --rm -v devopsdelight:/data alpine / *`
+- Now, let's create a new file at `/data` directory of the container and write some text to it. `echo "This is a named volume demo" > /data/demo.txt`
+- Exit from the container and remove the container using the `docker container rm` command
+- Now let's launch a new container by mounting the `datavol` volume again and print the content of the `demo.txt`. `docker container run --rm \ -v datavol:/data ubuntu`
+- Here default `docker volume create` command creates a directory for the volume under the `/var/lib/docker/volume` directory of the docker host. Docker internally creates one more directory named `-data` for each volume under the directory it created for that volume. We can confirm the directory path by running the `docker volume inspect` command.
+- when we mount the volume to a container, docker internally bind mounts the `-data` directory of the volume to the container.
+- Docker allows us to share the volume with more than one container.
+
+- To get help, type `docker volume create --help` or `docker volume ls --help` or `docker volume inspect --help`
+
+#### Sharing data between the host and the container
+- Bind mount is a linux capability that is used to take an existing directory structure and map it to a different location
+- when a container is launched with the `-v <hostpath>:<containerpath>` option, the docker engine bindmounts the host path into the container's filesystem on the specified container path.
+
+```
+- create a new directory.By using command `mkdir $HOME/data_share`
+- create a new file in the above directory of the docker host and write some text in it. `$ echo "data sharing demo" > $HOME/data_share/demo.txt`
+- Launch a container by mounting the above directory and print its content. `$ docker container run --rm \ 
+            -v $(HOME)/data_share:/data \ 
+            ubuntu cat /data/demo.txt 
+data sharing demo`
+
+```
+- Above we mounted a directory to a container. Simmilarly, we can also mount individual files to the container.  `$ docker container run --rm \
+          -v $(HOME)/data_share/demo.txt:/demo.txt \
+          ubuntu cat /demo.txt 
+data sharing demo`
+- By default, when we mount a directory or a file into a container, it gets mounted in read-write mode. So that the container can alter the content of the mounted directory or file.
+- we can prevent the containers from modifying the content of the mounted directory or file using `ro` flag.
+
+```
+$ touch file 
+$ docker container run -rm \ 
+                    -v ${PWD}/file:/file:rw \ 
+                    ubuntu sh -c "echo rw mode >> /file" 
+$ cat file
+rw mode 
+$ docker container run -rm \ 
+                    -v ${PWD}/file:/file:rw \
+                    ubuntu sh -c "echo ro >> /file" 
+sh: 1: cannot create /file: Read-only file system
+```
+
+### Docker use cases
+
+#### Testing with Docker
+- create a `/tmp` directory and then clone sample python code here ` git clone https://github.com/pallets/flask`
+- Create a `Dockerfile_2.7` file, as follows then build an image from it :
+```
+FROM python:2.7
+RUN pip install flask pytest
+ADD flask/ /flask
+WORKDIR /flask/examples/tutorial
+RUN pip install -e .
+cmd ["/usr/local/bin/pytest"]
+```
+
+- To build `python2.7test` image, run the command `docker image build -t python2.7test -f /tmp/Dockerfile_2.7`
+- Simmilarly, create a Dockerfile with `python:3.7` as base image and build the `python3.7test` image.
+```
+FROM python:3.7
+RUN pip install flask pytest
+ADD flask/ /flask
+WORKDIR /flask/exmples/tutorial
+RUN pip install -e .
+CMD ["/usr/local/bin/pytest"]
+```
+- To build the `python3.7test` image, run the command `docker image build -t python3.7test -f /tmp/Dockerfile_3.7 .`
+- Check the images using `docker image ls`
+- `docker container run python2.7test` simmilarly, to test with 3.7, `docker container run python3.7test`
+
+### Performing CI/CD with Shippable and Heroku
+- 
