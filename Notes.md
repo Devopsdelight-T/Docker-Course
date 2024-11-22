@@ -795,4 +795,64 @@ CMD ["/usr/local/bin/pytest"]
 - `docker container run python2.7test` simmilarly, to test with 3.7, `docker container run python3.7test`
 
 ### Performing CI/CD with Shippable and Heroku
-- 
+
+### Performing CI/CD with TravisCI
+
+- **TravisCI** is a hosted Continuous Integration service. it enables you to conveniencly setup projects to automatically build, test, and deploy them as you make any changes to your code.
+- As of now, they support over 30 languages such as C/C++, Dart, Go, Groovy, Java, Python etc.
+- Using TravisCi we can deploy our application on platforms such as Heroku, Google App Engine, AWS, Azure
+
+- we need to have `.travis.yml` file to integrate travis to our code.
+
+## Setting up PAAS with OpenShift Origin 
+
+- Platform-as-a-service(PAAS), is a type of cloud service where the consumer controls software deployments and configuration settings for applications (formely web) and the provider provides servers, networks, and other services to manage those deployments.
+- The provider can be external (public provider) or internal (IT Department in an organization)
+
+![image](https://github.com/user-attachments/assets/1771ad61-486e-407a-a436-11b0521d228d)
+
+- Kubernetes provides container cluster management with features such as scheduling pods and service discovery, but it does not have the concept of a complete application, nor does it build and deploy docker image from the source code.
+- Openshift extends the base kubernetes model and fills those gaps.
+- Openshift tries to abstract all the information and let you define one configuration file that takes care of all the internal wiring
+- Further, openshift provides other features such as automated deployment through source code push, centralized administration and management of applications, authentication, team and project isolation, and resource tracking and limiting, all of which are required for enterprise deployment
+
+##### Openshift installation in linux
+
+```
+$ curl https://get.docker.com | bash
+$ cat /etc/docker/daemon.json
+    {
+ "insecure-registries": [
+ "172.30.0.0/16"
+ ]
+ }
+
+$ systemctl start docker
+
+$ yum install -y wget
+
+$ cd /tmp
+$ wget https://github.com/openshift/origin/releases/download/v3.10.0/openshift-origin-client-tools-v3.10.0-dd10d17-linux-64bit.tar.gz
+
+$ tar -xvzf openshift-origin-client-tools-v3.10.0-dd10d17-linux-64bit.tar.gz
+$ cd openshift-origin-client-tools-v3.10.0-dd10d17-linux-64bit
+$ sudo cp oc /usr/local/bin
+$ cd ~
+$ oc cluster up --public-hostname=<your ip>
+$ oc status # To check the status
+$ oc cluster down 
+
+```
+
+- When OpenShift starts, all Kubernetes services start as well. Then, we connect to the OpenShift master through CLI and request it to start a pod. That request is then forwarded to Kubernetes, which starts the pod. OpenShift acts as the middleman between you and Kubernetes.
+
+```
+oc get builds
+oc get pods
+oc get services
+
+```
+
+- In a multiple node setup, your pods can be scheduled on different systems. OpenShift connects pods through the overlay network, so a pod running on one node can access another. It is called openshift-sdn. For more details, please visit https://docs.openshift.com/container-platform/3.10/architecture/networking/sdn.html.
+
+## Docker APIs and sdk
