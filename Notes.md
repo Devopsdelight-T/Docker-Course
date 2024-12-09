@@ -856,3 +856,37 @@ oc get services
 - In a multiple node setup, your pods can be scheduled on different systems. OpenShift connects pods through the overlay network, so a pod running on one node can access another. It is called openshift-sdn. For more details, please visit https://docs.openshift.com/container-platform/3.10/architecture/networking/sdn.html.
 
 ## Docker APIs and sdk
+
+
+## Docker Orchestration and Hosting a platform
+
+```
+- Running applications with docker compose
+- Setting up a cluster with Docker swarm
+- using secrets with docker swarm
+- setting up kubernetes clusters
+- scaling up and down in kubernetes clusters
+- using secrets with kubernetes
+- setting up wordpress with kubernetes clusters
+```
+
+- `sudo pip install docker-compose` -> to install docker compose on our server
+- `cd <directory>` -> create a directory for our application
+```
+version: '3.1'
+services:
+  wordpress:
+    image: wordpress
+    restart: always
+    ports:
+    - 8080:80
+    environment:
+      WORDPRESS_DB_PASSWORD: example
+  mysql:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+```
+
+`docker-compose up` --> To start our application
